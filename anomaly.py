@@ -82,6 +82,16 @@ class VDAT():
         
         return data
     
+    
+    def check_volume(self, vol):
+        threshold = [-35, -15]
+    
+        if vol <= threshold[0]:
+            return -1
+        elif vol <= threshold[1]:
+            return 0
+        else:
+            return 1    
 
     def getVolume(self, link):
     
@@ -119,33 +129,68 @@ class VDAT():
             nonsilent_data.remove(i)
     
     
+#         header = audio_bytes[:70]
+    
+#         user_talk_time = nonsilent_data
+        
+#         pTime = 1000
+#         time_list = list(range(0,math.ceil(nonsilent_data[-1][-1]/pTime)))
+#         time_per_1s = [[time_list[i]*pTime, time_list[i+1]*pTime]  for i in range(0,len(time_list)-1)]
+          
+#         audio_seg_u = []
+    
+#         for i in time_per_1s:
+#             a = i[0] * 32 + 16000
+#             b = i[1] * 32 + 16000
+#             audio_seg_u.append(AudioSegment.from_raw(
+#               io.BytesIO(header + audio_bytes[a:b]),
+#               sample_width=2,
+#               frame_rate=Freq,
+#               channels=1
+#             ))
+    
+    
+#         volumes = []
+#         for i in range(len(audio_seg_u)):
+#             volumes.append(audio_seg_u[i].dBFS)
+
+#         return volumes
+    
+        remove_list = []
+        for i in nonsilent_data:
+            if ((i[1] - i[0]) < 350):
+                remove_list.append(i)
+        for i in remove_list:
+            nonsilent_data.remove(i)
+    
+    
         header = audio_bytes[:70]
     
         user_talk_time = nonsilent_data
-        
-        pTime = 100
-        time_list = list(range(0,math.ceil(nonsilent_data[-1][-1]/pTime)))
-        time_per_1s = [[time_list[i]*pTime, time_list[i+1]*pTime]  for i in range(0,len(time_list)-1)]
-          
+    
         audio_seg_u = []
     
-        for i in time_per_1s:
+        for i in user_talk_time:
             a = i[0] * 32 + 16000
             b = i[1] * 32 + 16000
             audio_seg_u.append(AudioSegment.from_raw(
-              io.BytesIO(header + audio_bytes[a:b]),
-              sample_width=2,
-              frame_rate=Freq,
-              channels=1
+                io.BytesIO(header + audio_bytes[a:b]),
+                sample_width=2,
+                frame_rate=Freq,
+                channels=1
             ))
-    
     
         volumes = []
         for i in range(len(audio_seg_u)):
             volumes.append(audio_seg_u[i].dBFS)
     
+        # volume class - 0: too quiet, 1: a little quiet, 2: appropriate, 3: a little loud, 4: too loud
+        volume_class = []
+        for i in volumes:
+            volume_class.append(self.check_volume(i))
+        
+        return {'talk': user_talk_time, 'volumes': volumes, 'class': volume_class}
     
-        return volumes
                     
     def processE4(self, data):
         
@@ -270,7 +315,7 @@ class VDAT():
               'timestamp': [x['timestamp'] for x in data['series']], 
               'value': [x['value'] for x in data['series']]}
     
-        return result, result['isAnomaly']
+        return {'value':result['value'], 'expect': result['expectedValues'] ,'point': result['isAnomaly']}
     
     def makeChunk(self, data):
         chunk = []
@@ -290,19 +335,50 @@ class VDAT():
             
         return chunks    
     
+#     def getVoiceChunk(self, high, good):
+        
+#         goodChunk = []
+#         highChunk = []
+        
+#         for i in range(0, len(high)-1):
+#             if high[i] + 3 >= high[i+1]:
+#                 highChunk.append(high[i])
+#             else:
+#                 continue
+                
+#         for i in range(0, len(good)-1):
+#             if good[i] + 3 >= good[i+1]:
+#                 continue
+#             else:
+#                 goodChunk.append(good[i+1])
+                
+#         return highChunk, goodChunk
+                
     def getSensorResult(self, sensor=None, voice=None):
         
         data = self.csv2df(sensor)        
         
         anomalyVolume = None
         if voice is not None:
-            vo = self.getVolume(voice)
-            volume = pd.DataFrame(columns=['idx','timestamp','value'])
-            volume['idx'] = [i for i in range(0, len(vo))]
-            volume['timestamp'] = [datetime.datetime.fromtimestamp(i).isoformat() for i in volume['idx']]
-            volume['value'] = [v for i, v in enumerate(vo)]
-            sendVolume = self.makeJson(volume)
-            anomalyVolume, volumePoint = self.getAnomalyResult(sendVolume)
+            volume = self.getVolume(voice)
+#             volume = pd.DataFrame(columns=['idx','timestamp','value'])
+#             volume['idx'] = [i for i in range(0, len(vo))]
+#             volume['timestamp'] = [datetime.datetime.fromtimestamp(i).isoformat() for i in volume['idx']]
+#             volume['value'] = [v for i, v in enumerate(vo)]
+#             sendVolume = self.makeJson(volume)
+#             volumeDict = self.getAnomalyResult(sendVolume)
+            
+#         for i, v in enumerate(volumeDict['value']):
+#             if v < -60:
+#                 volumeDict['value'][i] = volumeDict['expect'][i]
+        
+#         temp = volumeDict['value']
+#         high = [i for i,v in enumerate(temp) if v > -15]
+#         good = [i for i,v in enumerate(temp) if v <= -15 and v >= -35]
+        
+#         volumeDict['high'], volumeDict['good'] = self.getVoiceChunk(high, good)
+         
+        
         
         incol = []
         for i in data['unix']:
@@ -371,18 +447,19 @@ class VDAT():
         
     
         
-        anomalyBvp, bvpPoint = self.getAnomalyResult(sendBvp)
-        anomalyEda, edaPoint = self.getAnomalyResult(sendEda)
-        anomalyTmp, tmpPoint = self.getAnomalyResult(sendTmp)
-        anomalyIbi, ibiPoint = self.getAnomalyResult(sendIbi)        
-        anomalyHr, hrPoint = self.getAnomalyResult(sendHr)
+        timestamp = [x['timestamp'] for x in sendBvp['series']] 
+        bvpDict = self.getAnomalyResult(sendBvp)
+        edaDict = self.getAnomalyResult(sendEda)
+        tmpDict = self.getAnomalyResult(sendTmp)
+        ibiDict = self.getAnomalyResult(sendIbi)        
+        hrDict = self.getAnomalyResult(sendHr)
         
         
-        bvpPoint = [i for i,v in enumerate(bvpPoint) if v ==True]
-        edaPoint = [i for i,v in enumerate(edaPoint) if v ==True]
-        tmpPoint = [i for i,v in enumerate(tmpPoint) if v ==True]
-        ibiPoint = [i for i,v in enumerate(ibiPoint) if v ==True]
-        hrPoint = [i for i,v in enumerate(hrPoint) if v ==True]
+        bvpPoint = [i for i,v in enumerate(bvpDict['point']) if v ==True]
+        edaPoint = [i for i,v in enumerate(edaDict['point']) if v ==True]
+        tmpPoint = [i for i,v in enumerate(tmpDict['point']) if v ==True]
+        ibiPoint = [i for i,v in enumerate(ibiDict['point']) if v ==True]
+        hrPoint = [i for i,v in enumerate(hrDict['point']) if v ==True]
         
         anomalyPoints = sorted(list(set([*bvpPoint, *edaPoint,*tmpPoint,*ibiPoint,*hrPoint,])))
         
@@ -410,6 +487,12 @@ class VDAT():
         eyeAll = [eyeCoworker, eyeGuest, eyeNone]
 
         
-        return {'eye': eyeAll, 'vr': vrAll, 'bvp': anomalyBvp, 'eda': anomalyEda, 'volume': anomalyVolume, 
-                'tmp': anomalyTmp, 'ibi': anomalyIbi, 'hr': anomalyHr ,'anomaly': anomalyPoints}
+        return {'timestamp':timestamp, 'eye': eyeAll, 'vr': vrAll, 
+                'bvp': bvpDict,
+                'eda': edaDict,
+                'volume': volume,
+                'tmp': tmpDict,
+                'ibi': ibiDict,
+                'hr': hrDict,
+                'anomaly': anomalyPoints}
     
