@@ -66,7 +66,7 @@ class GetAnomaly(Resource):
     def get(self):
         a = anomaly.VDAT()
         sensor = "../20220611/지용님/20220611_142409_data(head,e4,eye).csv"
-        volume = "../20220611/지용님/20220611_143903_voice.wav"
+        volume = "20220611_143903_voice.wav"
         result = a.getSensorResult(sensor, volume)
 
         return result
