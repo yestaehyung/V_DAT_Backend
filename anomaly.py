@@ -16,6 +16,7 @@ import wave
 # import math
 # import webrtcvad
 # from scipy.io import wavfile
+import ssl
 import requests
 from azure.ai.anomalydetector import AnomalyDetectorClient
 from azure.ai.anomalydetector.models import DetectRequest, TimeSeriesPoint, TimeGranularity, \
@@ -59,7 +60,7 @@ class VDAT():
 
     def csv2df(self, csv):
 
-        data = pd.read_csv(csv)
+        data = pd.read_csv(io.BytesIO(csv))
         data = data[data[' Start'] == 1].reset_index(drop=True)
         data = data.fillna(0)
 #         data = data.reset_index(drop=True)
@@ -89,18 +90,18 @@ class VDAT():
         else:
             return 1
 
-    def getVolume(self, link):
+    def getVolume(self, name):
 
-        # # path from URL
-        # url = "https://dt1amnyxy57si.cloudfront.net/audios/0317_Audio.wav"
-        # Freq = 16000
-        # context = ssl._create_unverified_context()
-        # audio_bytes = request.urlopen(url,context=context).read()
+        # path from URL
+        url = "https://dt1amnyxy57si.cloudfront.net/audios/" + name
+        Freq = 16000
+        context = ssl._create_unverified_context()
+        audio_bytes = request.urlopen(url, context=context).read()
 
         # path from local
-        audio_bytes = wave.open(link, 'rb')
-        Freq = 16000
-        audio_bytes = audio_bytes.readframes(14400000)
+        # audio_bytes = wave.open(link, 'rb')
+        # Freq = 16000
+        # audio_bytes = audio_bytes.readframes(14400000)
 
         # Convert wav to audio_segment
         audio_segment = AudioSegment.from_raw(
