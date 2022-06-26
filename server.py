@@ -1,7 +1,6 @@
 from flask import Flask, request, make_response
 from flask_restx import Resource, Api, reqparse
 from flask_cors import CORS
-import pandas as pd
 import json
 import boto3
 from datetime import datetime
@@ -9,34 +8,29 @@ from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
 from pydub.silence import split_on_silence
 
-import io
-import collections
-import contextlib
-import sys
-import wave
-import webrtcvad
-import os
-import ssl
+# import io
+# import collections
+# import contextlib
+# import sys
+# import wave
+# import webrtcvad
+# import os
+# import ssl
 import werkzeug
 from werkzeug.utils import secure_filename
 import numpy as np
 from datetime import datetime
-
-
-import datetime
+# import datetime
 import json
-import requests
+# import requests
 from azure.ai.anomalydetector import AnomalyDetectorClient
 from azure.ai.anomalydetector.models import DetectRequest, TimeSeriesPoint, TimeGranularity, \
     AnomalyDetectorError
 from azure.core.credentials import AzureKeyCredential
 import pandas as pd
 from dateutil import parser
-from pymongo import MongoClient
-
 import time
 import anomaly
-import matplotlib.pyplot as plt
 
 
 app = Flask(__name__)
