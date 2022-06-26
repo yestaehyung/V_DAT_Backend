@@ -7,7 +7,6 @@ from datetime import datetime
 from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
 from pydub.silence import split_on_silence
-
 # import io
 # import collections
 # import contextlib
@@ -74,4 +73,7 @@ class GetAnomaly(Resource):
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(
+        host="0.0.0.0",
+        port="8080"
+    )
