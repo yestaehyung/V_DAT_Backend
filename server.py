@@ -48,6 +48,18 @@ class GetAnomaly(Resource):
         return result
 
 
+@api.route('/develop')
+class GetDevelop(Resource):
+    def post(self):
+        a = anomaly.VDAT()
+        f = request.files['file'].read()
+        volume = request.form['voice']
+        result = a.getResult(f, volume)
+
+        return result
+    
+
+
 if __name__ == '__main__':
     app.run(
         debug=True,
