@@ -61,6 +61,7 @@ class VDAT():
     def csv2df(self, csv):
 
         data = pd.read_csv(io.BytesIO(csv))
+#         data = pd.read_csv(csv)
         data = data[data[' Start'] == 1].reset_index(drop=True)
         data = data.fillna(0)
 #         data = data.reset_index(drop=True)
@@ -227,21 +228,140 @@ class VDAT():
         pData = pData[['idx', 'iso', 'sec', 'value']]
 
         return pData, requestData
+    
+    def processEye(self, data):
 
-    def processAnother(self, data, vrTime):
-        idx = vrTime['idx']
-        pData = pd.DataFrame(columns=[data.columns])
-        timeList = []
+        idx = data['idx']
+        
+        combineXvalue = []
+        combineYvalue = []
+        combineZvalue = []
+
+        iso = []
+        xxx = []
+    
+        for i in idx:
+            combineX = [float(i) for i in data[data['idx'] == i][' combined_x']]
+            combineY = [float(i) for i in data[data['idx'] == i][' combined_y']]
+            combineZ = [float(i) for i in data[data['idx'] == i][' combined_z']]
+            
+            t = float(i)
+            iso.append(datetime.datetime.fromtimestamp(t).isoformat())
+            xxx.append(datetime.datetime.fromtimestamp(t).isoformat()[14:19])
+            combineXvalue.append(round(sum(combineX) / len(combineX), 4))
+            combineYvalue.append(round(sum(combineY) / len(combineY), 4))
+            combineZvalue.append(round(sum(combineZ) / len(combineZ), 4))
+            
+
+        pData = pd.DataFrame()
+        pData['idx'] = idx
+        pData['iso'] = iso
+        pData['temp'] = xxx
+        pData['combine_x'] = combineXvalue
+        pData['combine_y'] = combineYvalue
+        pData['combine_z'] = combineZvalue
+
+        pattern = re.compile(r':\d\d')
         sec = []
-        for i in list(set(idx)):
-            t_data = data[data['idx'] == i]
-            sec.append(list(vrTime[data['idx'] == i]['vrTime'])[0][-2:])
-            timeList.append(list(vrTime[data['idx'] == i]['vrTime'])[0])
-            pData.loc[len(pData)] = list(t_data.mean())
-        pData['timestamp'] = timeList
+        for i in pData['iso']:
+            sec.append(re.findall(pattern, i)[1][1:])
         pData['sec'] = sec
 
-        return pData
+        combineXvalue = []
+        combineYvalue = []
+        combineZvalue = []
+
+        xxx = sorted(list(set(xxx)))
+        for i in xxx:
+            xxxx = pData[pData['temp'] == i]['combine_x']
+            combineXvalue.append(xxxx.mean())
+        for i in xxx:
+            xxxx = pData[pData['temp'] == i]['combine_y']
+            combineYvalue.append(xxxx.mean())
+        for i in xxx:
+            xxxx = pData[pData['temp'] == i]['combine_z']
+            combineZvalue.append(xxxx.mean())
+
+        requestData = pd.DataFrame()
+        requestData['timestamp'] = sorted(
+            list(set([i[:19] for i in pData['iso']])))
+        requestData['combine_x'] = combineXvalue
+        requestData['combine_y'] = combineYvalue
+        requestData['combine_z'] = combineZvalue
+
+        pData = pData[['idx', 'iso', 'sec', 'combine_x', 'combine_y', 'combine_z']]
+
+        return pData, requestData
+
+    
+    def processHmd(self, data):
+
+        idx = data['idx']
+        value = []
+        iso = []
+        xxx = []
+        
+        left_pos_x = []
+        left_pos_y = []
+        left_pos_z = []
+
+        for i in idx:
+            leftPosX = [float(i) for i in data[data['idx'] == i][' Left_pos.x']]
+            leftPosY = [float(i) for i in data[data['idx'] == i][' Left_pos.y']]
+            leftPosZ = [float(i) for i in data[data['idx'] == i][' Left_pos.z']]
+            
+            left_pos_x.append(round(sum(leftPosX) / len(leftPosX), 4))
+            left_pos_y.append(round(sum(leftPosY) / len(leftPosY), 4))
+            left_pos_z.append(round(sum(leftPosZ) / len(leftPosZ), 4))
+            
+            t = float(i)
+            iso.append(datetime.datetime.fromtimestamp(t).isoformat())
+            xxx.append(datetime.datetime.fromtimestamp(t).isoformat()[14:19])
+
+        pData = pd.DataFrame()
+        pData['idx'] = idx
+        pData['iso'] = iso
+        pData['temp'] = xxx
+        pData['left_pos_x'] = left_pos_x
+        pData['left_pos_y'] = left_pos_y
+        pData['left_pos_z'] = left_pos_z
+
+        pattern = re.compile(r':\d\d')
+        sec = []
+        for i in pData['iso']:
+            sec.append(re.findall(pattern, i)[1][1:])
+        pData['sec'] = sec
+
+        left_pos_x = []
+        left_pos_y = []
+        left_pos_z = []
+       
+        xxx = sorted(list(set(xxx)))
+        
+        for i in xxx:
+            xxxx = pData[pData['temp'] == i]['left_pos_x']
+            left_pos_x.append(xxxx.mean())
+        for i in xxx:
+            xxxx = pData[pData['temp'] == i]['left_pos_y']
+            left_pos_y.append(xxxx.mean())
+        for i in xxx:
+            xxxx = pData[pData['temp'] == i]['left_pos_z']
+            left_pos_z.append(xxxx.mean())
+
+        requestData = pd.DataFrame()
+        requestData['timestamp'] = sorted(
+            list(set([i[:19] for i in pData['iso']])))
+        
+        requestData['left_pos_x'] = left_pos_x
+        requestData['left_pos_y'] = left_pos_y
+        requestData['left_pos_z'] = left_pos_z
+
+
+        pData = pData[['idx', 'iso', 'sec', 'left_pos_x', 'left_pos_y','left_pos_z']]
+
+        return pData, requestData
+    
+    
 
     def makeRequestHmd(self, data):
 
@@ -308,7 +428,7 @@ class VDAT():
                   'timestamp': [x['timestamp'] for x in data['series']],
                   'value': [x['value'] for x in data['series']]}
 
-        return {'value': result['value'], 'expect': result['expectedValues'], 'point': result['isAnomaly']}
+        return {'value': result['value'], 'point': result['isAnomaly']}
 
     def makeChunk(self, data):
         chunk = []
@@ -327,25 +447,6 @@ class VDAT():
             n = chunk[i] + 1
 
         return chunks
-
-#     def getVoiceChunk(self, high, good):
-
-#         goodChunk = []
-#         highChunk = []
-
-#         for i in range(0, len(high)-1):
-#             if high[i] + 3 >= high[i+1]:
-#                 highChunk.append(high[i])
-#             else:
-#                 continue
-
-#         for i in range(0, len(good)-1):
-#             if good[i] + 3 >= good[i+1]:
-#                 continue
-#             else:
-#                 goodChunk.append(good[i+1])
-
-#         return highChunk, goodChunk
 
     def getSensorResult(self, sensor=None, voice=None):
 
@@ -399,6 +500,8 @@ class VDAT():
             elif 1 not in temp:
                 vrTracking.append(0)
 
+        hmd = data[['idx', ' Left_pos.x', ' Left_pos.y', ' Left_pos.z',
+                    ' Left_rot.x', ' Left_rot.y', ' Left_rot.z']]
         e4Eda = data[[' EDA']]
         e4Bvp = data[[' BVP']]
         e4Tmp = data[[' TMP']]
@@ -475,8 +578,103 @@ class VDAT():
         return {'timestamp': timestamp, 'eye': eyeAll, 'vr': vrAll,
                 'bvp': bvpDict,
                 'eda': edaDict,
+                #                 'volume': volume,
+                'tmp': tmpDict,
+                'ibi': ibiDict,
+                'hr': hrDict,
+                'anomaly': anomalyPoints}
+    
+    def getResult(self, sensor=None, voice=None):
+
+        data = self.csv2df(sensor)
+
+        anomalyVolume = None
+        volume = []
+        if voice is not None:
+            volume = self.getVolume(voice)
+        incol = []
+        for i in data['unix']:
+            incol.append(i - data['unix'][0])
+        data['idx'] = incol
+        self.df = data.copy()
+
+        self.vrTime = data[['idx', 'vrTime']]
+
+        hmd = data[['idx', ' Left_pos.x', ' Left_pos.y', ' Left_pos.z']]
+        eye = data[['idx',' combined_x',' combined_y', ' combined_z',]]
+        
+        e4Eda = data[[' EDA']]
+        e4Bvp = data[[' BVP']]
+        e4Tmp = data[[' TMP']]
+        e4Ibi = data[[' IBI']]
+
+        e4Bvp = pd.DataFrame(data=[i[8:].split()
+                             for i in e4Bvp[' BVP']], columns=['unix', 'value'])
+        e4Eda = pd.DataFrame(data=[i[8:].split()
+                             for i in e4Eda[' EDA']], columns=['unix', 'value'])
+        e4Tmp = pd.DataFrame(data=[i[16:].split()
+                             for i in e4Tmp[' TMP']], columns=['unix', 'value'])
+        e4Ibi = pd.DataFrame(data=[i[8:].split()
+                             for i in e4Ibi[' IBI']], columns=['unix', 'value'])
+
+        e4Bvp['idx'] = incol
+        e4Eda['idx'] = incol
+        e4Tmp['idx'] = incol
+        e4Ibi['idx'] = incol
+
+        e4Hr = e4Ibi.copy()
+        a = np.full(len(e4Hr['value']), 60)
+        e4Hr['value'] = a / np.array(e4Hr['value'], dtype=float)
+
+        self.pBvp, self.requestBvp = self.processE4(e4Bvp)
+        self.pEda, self.requestEda = self.processE4(e4Eda)
+        self.pTmp, self.requestTmp = self.processE4(e4Tmp)
+        self.pIbi, self.requestIbi = self.processE4(e4Ibi)
+        self.pHr, self.requestHr = self.processE4(e4Hr)
+        
+        self.pHmd, self.requestHmd = self.processHmd(hmd)
+        self.pEye, self.requestEye = self.processEye(eye)
+
+        sendBvp = self.makeJson(self.requestBvp)
+        sendEda = self.makeJson(self.requestEda)
+        sendTmp = self.makeJson(self.requestTmp)
+        sendIbi = self.makeJson(self.requestIbi)
+        sendHr = self.makeJson(self.requestHr)
+
+        timestamp = [x['timestamp'] for x in sendBvp['series']]
+        bvpDict = self.getAnomalyResult(sendBvp)
+        edaDict = self.getAnomalyResult(sendEda)
+        tmpDict = self.getAnomalyResult(sendTmp)
+        ibiDict = self.getAnomalyResult(sendIbi)
+        hrDict = self.getAnomalyResult(sendHr)
+
+        bvpPoint = [i for i, v in enumerate(bvpDict['point']) if v == True]
+        edaPoint = [i for i, v in enumerate(edaDict['point']) if v == True]
+        tmpPoint = [i for i, v in enumerate(tmpDict['point']) if v == True]
+        ibiPoint = [i for i, v in enumerate(ibiDict['point']) if v == True]
+        hrPoint = [i for i, v in enumerate(hrDict['point']) if v == True]
+
+        anomalyPoints = sorted(
+            list(set([*bvpPoint, *edaPoint, *tmpPoint, *ibiPoint, *hrPoint, ])))
+
+        sendHmd = {}
+        sendHmd['x'] = self.requestHmd['left_pos_x'].to_list()
+        sendHmd['y'] = self.requestHmd['left_pos_y'].to_list()
+        sendHmd['z'] = self.requestHmd['left_pos_z'].to_list()
+        
+        sendEye = {}
+        sendEye['x'] = self.requestEye['combine_x'].to_list()
+        sendEye['y'] = self.requestEye['combine_y'].to_list()
+        sendEye['z'] = self.requestEye['combine_z'].to_list()
+        
+        return {'timestamp': timestamp,
+                'hmd': sendHmd,
+                'eye': sendEye,
+                'bvp': bvpDict,
+                'eda': edaDict,
                 'volume': volume,
                 'tmp': tmpDict,
                 'ibi': ibiDict,
                 'hr': hrDict,
                 'anomaly': anomalyPoints}
+
