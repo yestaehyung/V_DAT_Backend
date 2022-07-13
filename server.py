@@ -54,7 +54,7 @@ class GetDevelop(Resource):
         a = anomaly.VDAT()
         f = request.files['file'].read()
         volume = request.form['voice']
-        result = a.geteResult(f, volume)
+        result = a.getResult(f, volume)
 
         return result
     
