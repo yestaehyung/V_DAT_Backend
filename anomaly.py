@@ -186,7 +186,7 @@ class VDAT():
         for i in volumes:
             volume_class.append(self.check_volume(i))
 
-        return {'talk': user_talk_time, 'volumes': volumes, 'class': volume_class}
+        return {'talk': user_talk_time, 'value': volumes, 'class': volume_class}
 
     def processE4(self, data):
 
@@ -578,7 +578,7 @@ class VDAT():
         return {'timestamp': timestamp, 'eye': eyeAll, 'vr': vrAll,
                 'bvp': bvpDict,
                 'eda': edaDict,
-                #                 'volume': volume,
+                'volume': volume,
                 'tmp': tmpDict,
                 'ibi': ibiDict,
                 'hr': hrDict,
@@ -597,7 +597,7 @@ class VDAT():
             incol.append(i - data['unix'][0])
         data['idx'] = incol
         self.df = data.copy()
-
+        print("1")
         self.vrTime = data[['idx', 'vrTime']]
 
         hmd = data[['idx', ' Left_pos.x', ' Left_pos.y', ' Left_pos.z']]
@@ -631,7 +631,7 @@ class VDAT():
         self.pTmp, self.requestTmp = self.processE4(e4Tmp)
         self.pIbi, self.requestIbi = self.processE4(e4Ibi)
         self.pHr, self.requestHr = self.processE4(e4Hr)
-        
+        print("2")
         self.pHmd, self.requestHmd = self.processHmd(hmd)
         self.pEye, self.requestEye = self.processEye(eye)
 
@@ -656,7 +656,7 @@ class VDAT():
 
         anomalyPoints = sorted(
             list(set([*bvpPoint, *edaPoint, *tmpPoint, *ibiPoint, *hrPoint, ])))
-
+        print("3")
         sendHmd = {}
         sendHmd['x'] = self.requestHmd['left_pos_x'].to_list()
         sendHmd['y'] = self.requestHmd['left_pos_y'].to_list()
