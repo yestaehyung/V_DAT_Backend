@@ -228,30 +228,32 @@ class VDAT():
         pData = pData[['idx', 'iso', 'sec', 'value']]
 
         return pData, requestData
-    
+
     def processEye(self, data):
 
         idx = data['idx']
-        
+
         combineXvalue = []
         combineYvalue = []
         combineZvalue = []
 
         iso = []
         xxx = []
-    
+
         for i in idx:
-            combineX = [float(i) for i in data[data['idx'] == i][' combined_x']]
-            combineY = [float(i) for i in data[data['idx'] == i][' combined_y']]
-            combineZ = [float(i) for i in data[data['idx'] == i][' combined_z']]
-            
+            combineX = [float(i)
+                        for i in data[data['idx'] == i][' combined_x']]
+            combineY = [float(i)
+                        for i in data[data['idx'] == i][' combined_y']]
+            combineZ = [float(i)
+                        for i in data[data['idx'] == i][' combined_z']]
+
             t = float(i)
             iso.append(datetime.datetime.fromtimestamp(t).isoformat())
             xxx.append(datetime.datetime.fromtimestamp(t).isoformat()[14:19])
             combineXvalue.append(round(sum(combineX) / len(combineX), 4))
             combineYvalue.append(round(sum(combineY) / len(combineY), 4))
             combineZvalue.append(round(sum(combineZ) / len(combineZ), 4))
-            
 
         pData = pd.DataFrame()
         pData['idx'] = idx
@@ -289,31 +291,34 @@ class VDAT():
         requestData['combine_y'] = combineYvalue
         requestData['combine_z'] = combineZvalue
 
-        pData = pData[['idx', 'iso', 'sec', 'combine_x', 'combine_y', 'combine_z']]
+        pData = pData[['idx', 'iso', 'sec',
+                       'combine_x', 'combine_y', 'combine_z']]
 
         return pData, requestData
 
-    
     def processHmd(self, data):
 
         idx = data['idx']
         value = []
         iso = []
         xxx = []
-        
+
         left_pos_x = []
         left_pos_y = []
         left_pos_z = []
 
         for i in idx:
-            leftPosX = [float(i) for i in data[data['idx'] == i][' Left_pos.x']]
-            leftPosY = [float(i) for i in data[data['idx'] == i][' Left_pos.y']]
-            leftPosZ = [float(i) for i in data[data['idx'] == i][' Left_pos.z']]
-            
+            leftPosX = [float(i)
+                        for i in data[data['idx'] == i][' Left_pos.x']]
+            leftPosY = [float(i)
+                        for i in data[data['idx'] == i][' Left_pos.y']]
+            leftPosZ = [float(i)
+                        for i in data[data['idx'] == i][' Left_pos.z']]
+
             left_pos_x.append(round(sum(leftPosX) / len(leftPosX), 4))
             left_pos_y.append(round(sum(leftPosY) / len(leftPosY), 4))
             left_pos_z.append(round(sum(leftPosZ) / len(leftPosZ), 4))
-            
+
             t = float(i)
             iso.append(datetime.datetime.fromtimestamp(t).isoformat())
             xxx.append(datetime.datetime.fromtimestamp(t).isoformat()[14:19])
@@ -335,9 +340,9 @@ class VDAT():
         left_pos_x = []
         left_pos_y = []
         left_pos_z = []
-       
+
         xxx = sorted(list(set(xxx)))
-        
+
         for i in xxx:
             xxxx = pData[pData['temp'] == i]['left_pos_x']
             left_pos_x.append(xxxx.mean())
@@ -351,17 +356,15 @@ class VDAT():
         requestData = pd.DataFrame()
         requestData['timestamp'] = sorted(
             list(set([i[:19] for i in pData['iso']])))
-        
+
         requestData['left_pos_x'] = left_pos_x
         requestData['left_pos_y'] = left_pos_y
         requestData['left_pos_z'] = left_pos_z
 
-
-        pData = pData[['idx', 'iso', 'sec', 'left_pos_x', 'left_pos_y','left_pos_z']]
+        pData = pData[['idx', 'iso', 'sec',
+                       'left_pos_x', 'left_pos_y', 'left_pos_z']]
 
         return pData, requestData
-    
-    
 
     def makeRequestHmd(self, data):
 
@@ -583,7 +586,7 @@ class VDAT():
                 'ibi': ibiDict,
                 'hr': hrDict,
                 'anomaly': anomalyPoints}
-    
+
     def getResult(self, sensor=None, voice=None):
 
         data = self.csv2df(sensor)
@@ -601,8 +604,8 @@ class VDAT():
         self.vrTime = data[['idx', 'vrTime']]
 
         hmd = data[['idx', ' Left_pos.x', ' Left_pos.y', ' Left_pos.z']]
-        eye = data[['idx',' combined_x',' combined_y', ' combined_z',]]
-        
+        eye = data[['idx', ' combined_x', ' combined_y', ' combined_z', ]]
+
         e4Eda = data[[' EDA']]
         e4Bvp = data[[' BVP']]
         e4Tmp = data[[' TMP']]
@@ -631,7 +634,7 @@ class VDAT():
         self.pTmp, self.requestTmp = self.processE4(e4Tmp)
         self.pIbi, self.requestIbi = self.processE4(e4Ibi)
         self.pHr, self.requestHr = self.processE4(e4Hr)
-        print("2")
+
         self.pHmd, self.requestHmd = self.processHmd(hmd)
         self.pEye, self.requestEye = self.processEye(eye)
 
@@ -661,15 +664,48 @@ class VDAT():
         sendHmd['x'] = self.requestHmd['left_pos_x'].to_list()
         sendHmd['y'] = self.requestHmd['left_pos_y'].to_list()
         sendHmd['z'] = self.requestHmd['left_pos_z'].to_list()
-        
+
         sendEye = {}
         sendEye['x'] = self.requestEye['combine_x'].to_list()
         sendEye['y'] = self.requestEye['combine_y'].to_list()
         sendEye['z'] = self.requestEye['combine_z'].to_list()
-        
+
         return {'timestamp': timestamp,
                 'hmd': sendHmd,
-                'eye': sendEye,
+                'eye': [
+    {
+      "name": "Series 1",
+      "data": [{
+        "x": 'W1',
+        "y": 22
+      }, {
+        "x": 'W2',
+        "y": 29
+      }, {
+        "x": 'W3',
+        "y": 13
+      }, {
+        "x": 'W4',
+        "y": 32
+      }]
+    },
+    {
+      "name": "Series 2",
+      "data": [{
+        "x": 'W1',
+        "y": 43
+      }, {
+        "x": 'W2',
+        "y": 43
+      }, {
+        "x": 'W3',
+        "y": 43
+      }, {
+        "x": 'W4',
+        "y": 43
+      }]
+    }
+  ],
                 'bvp': bvpDict,
                 'eda': edaDict,
                 'volume': volume,
@@ -677,4 +713,3 @@ class VDAT():
                 'ibi': ibiDict,
                 'hr': hrDict,
                 'anomaly': anomalyPoints}
-
