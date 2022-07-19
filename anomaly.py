@@ -600,7 +600,7 @@ class VDAT():
             incol.append(i - data['unix'][0])
         data['idx'] = incol
         self.df = data.copy()
-        print("1")
+        print("Setting data")
         self.vrTime = data[['idx', 'vrTime']]
 
         hmd = data[['idx', ' Left_pos.x', ' Left_pos.y', ' Left_pos.z']]
@@ -659,7 +659,7 @@ class VDAT():
 
         anomalyPoints = sorted(
             list(set([*bvpPoint, *edaPoint, *tmpPoint, *ibiPoint, *hrPoint, ])))
-        print("3")
+        print("Get Anomaly Points")
         sendHmd = {}
         sendHmd['x'] = self.requestHmd['left_pos_x'].to_list()
         sendHmd['y'] = self.requestHmd['left_pos_y'].to_list()
